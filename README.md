@@ -1,27 +1,68 @@
 # D&D Web Adventure Application
+You're building an impressive AI-driven fantasy adventure game! Here's a well-structured repository setup, ready for direct copy-pasting, based on the file structure and contents you provided.
+RealmWeaver – Modular AI-Driven Fantasy Adventure
+RealmWeaver is an experimental game engine that combines:
+ * AI Narration: Uses Hugging Face models (Mistral/Zephyr) for dynamic storytelling.
+ * Quest Generation: A simple, randomized quest generator inspired by open-source Storyteller ideas.
+ * Sprite-Based Visuals: Maps narrative tags to your sprite assets via spriteMap.json.
+ * Map Rendering: A Phaser‑powered map engine that loads Tiled JSON maps.
+ * Modular Components: Stub modules for battle logic, tile triggers, and NPC dialogue.
+Setup Instructions
+ * Clone or copy the repository.
+ * Install Dependencies:
+   npm install
 
-This repository contains a D&D web adventure application that integrates AI storytelling. Follow the steps below to set up and run the application on your local machine.
+ * Create a .env File:
+   * Place your Hugging Face API token in the .env file as shown below.
+ * Add Your Assets:
+   * Place sprite images in client/assets/sprites/ (ensure paths match those in server/spriteMap.json).
+   * Place your Tiled maps (exported as JSON) in client/assets/maps/ (or in the maps/ folder).
+ * Run the Server:
+   npm start
+
+ * Open the Game:
+   * Navigate to http://localhost:3000 in your browser.
+Expand or swap out modules as needed to fit your creative vision!
+Happy adventuring!
 Folder Structure
-
-
+realmweaver/
+├── client/
+│   ├── index.html                // Main HTML page with game UI, Phaser canvas, and sprite preview panel
+│   ├── style.css                 // Styling for HUD, story log, sprites, etc.
+│   ├── script.js                 // Frontend logic: communicating with server, updating UI
+│   ├── mapEngine.js              // Phaser-based map loader (loads Tiled JSON maps)
+│   ├── effectLayer.js            // (Stub) For visual effects (spell animations, combat flashes)
+│   └── assets/
+│       ├── sprites/              // Your sprite images (tiles, enemies, items, etc.)
+│       └── maps/                 // Exported Tiled map files (JSON format)
+│
+├── server/
+│   ├── index.js                  // Express server and API routes
+│   ├── aiEngine.js               // AI integration (calls Hugging Face and returns narrative with tags)
+│   ├── gameManager.js            // Session management, command processing, logging, quest integration
+│   ├── fileStorage.js            // Saves game logs to disk
+│   ├── questGenerator.js         // Simple quest generator (inspired by Storyteller)
+│   ├── spriteMap.json            // Maps AI tags (like "forest", "goblin") to sprite file paths
+│   └── modules/                  
+│       ├── battleLogic.js        // (Stub) Battle outcome calculations, XP/loot logic
+│       ├── tileTriggers.js       // (Stub) Map event triggers (like traps)
+│       └── npcDialogue.js        // (Stub) NPC dialogue generator
+│
+├── maps/                         // (Optional) External Tiled map files if you want to keep them separate
+│
+├── logs/                         // Game session logs will be saved here
+│
+├── .env                          // Environment variables (include your HF API token here)
+├── package.json                  // NPM dependencies and start script
+└── README.md                     // Project overview and instructions
 
 File Contents
-
-Below you’ll find the complete code for each file.
-
-
 1. .env
-
 (Place this file in the project root.)
-
 HF_API_TOKEN=your_huggingface_api_token_here
 
 Replace the value with your actual Hugging Face API token.
-
----
-
 2. package.json
-
 {
   "name": "realmweaver",
   "version": "1.0.0",
@@ -38,48 +79,10 @@ Replace the value with your actual Hugging Face API token.
   }
 }
 
----
-
 3. README.md
-
-# RealmWeaver – Modular AI-Driven Fantasy Adventure
-
-RealmWeaver is an experimental game engine that combines:
-- **AI Narration:** Uses Hugging Face models (Mistral/Zephyr) for dynamic storytelling.
-- **Quest Generation:** A simple, randomized quest generator inspired by open-source Storyteller ideas.
-- **Sprite-Based Visuals:** Maps narrative tags to your sprite assets via `spriteMap.json`.
-- **Map Rendering:** A Phaser‑powered map engine that loads Tiled JSON maps.
-- **Modular Components:** Stub modules for battle logic, tile triggers, and NPC dialogue.
-
-## Setup Instructions
-
-1. **Clone or copy the repository.**
-
-2. **Install Dependencies:**
-   ```bash
-   npm install
-
-1. Create a `.env` File:• Place your Hugging Face API token in the `.env` file as shown above.
-
-2. Add Your Assets:• Place sprite images in `client/assets/sprites/` (ensure paths match those in `server/spriteMap.json`).
-• Place your Tiled maps (exported as JSON) in `client/assets/maps/` (or in the `maps/` folder).
-
-3. Run the Server:npm start
-4. Open the Game:• Navigate to http://localhost:3000 in your browser.
-
-
-
-Expand or swap out modules as needed to fit your creative vision!
-
-Happy adventuring!
-
----
-
-## Server Code
-
-### 4. **server/index.js**
-
-```js
+(This content is already provided above as the primary README.)
+Server Code
+4. server/index.js
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -122,10 +125,7 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
----
-
 5. server/aiEngine.js
-
 require('dotenv').config();
 const fetch = require('node-fetch');
 const fs = require('fs');
@@ -237,10 +237,7 @@ Return a JSON with the next scene narrative and structured tags as follows:
 
 module.exports = { generateIntro, continueStory };
 
----
-
 6. server/gameManager.js
-
 const path = require('path');
 const { generateIntro, continueStory } = require('./aiEngine');
 const { saveLog, updateLog } = require('./fileStorage');
@@ -302,10 +299,7 @@ async function handleCommand(gameId, command) {
 
 module.exports = { createGame, handleCommand };
 
----
-
 7. server/fileStorage.js
-
 const fs = require('fs');
 const path = require('path');
 
@@ -330,10 +324,7 @@ function updateLog(filePath, newEntry) {
 
 module.exports = { saveLog, updateLog };
 
----
-
 8. server/questGenerator.js
-
 function generateQuest() {
   const quests = [
     "Retrieve the ancient sword from the dungeon depths.",
@@ -346,10 +337,7 @@ function generateQuest() {
 
 module.exports = { generateQuest };
 
----
-
 9. server/spriteMap.json
-
 {
   "forest": "assets/sprites/tiles/forest.png",
   "swamp": "assets/sprites/tiles/swamp.png",
@@ -365,10 +353,7 @@ module.exports = { generateQuest };
   "mystic_relic": "assets/sprites/items/relic.png"
 }
 
----
-
 10. server/modules/battleLogic.js
-
 function calculateBattleOutcome(player, enemy) {
   // Simple logic: if the player's level is equal to or higher than the enemy's, the player wins.
   if (player.level >= enemy.level) {
@@ -379,10 +364,7 @@ function calculateBattleOutcome(player, enemy) {
 
 module.exports = { calculateBattleOutcome };
 
----
-
 11. server/modules/tileTriggers.js
-
 function checkTileEvent(tileType) {
   if (tileType === 'trap') {
     return "You've stepped on a trap! Lose 10 HP.";
@@ -392,10 +374,7 @@ function checkTileEvent(tileType) {
 
 module.exports = { checkTileEvent };
 
----
-
 12. server/modules/npcDialogue.js
-
 function getNPCDialogue(npcName) {
   const dialogues = {
     "old_wise": "The forest holds many secrets. Tread carefully.",
@@ -407,12 +386,8 @@ function getNPCDialogue(npcName) {
 
 module.exports = { getNPCDialogue };
 
----
-
 Client Code
-
 13. client/index.html
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -420,11 +395,9 @@ Client Code
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>RealmWeaver Adventure</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- Load Phaser from CDN for map rendering -->
   <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
 </head>
 <body>
-  <!-- Lobby where player creates a game -->
   <div id="lobby">
     <h1>RealmWeaver Lobby</h1>
     <form id="create-game">
@@ -434,21 +407,17 @@ Client Code
     </form>
   </div>
 
-  <!-- Main game interface -->
   <div id="game" style="display: none;">
     <h2>RealmWeaver Adventure</h2>
     
-    <!-- HUD -->
     <div id="hud">
       <div class="stat"><span class="icon">❤️</span><span id="hpDisplay">HP: 100</span></div>
       <div class="stat"><span class="icon">⭐</span><span id="xpDisplay">XP: 0 / 50</span></div>
       <div class="stat"><span class="icon">⬆️</span><span id="lvlDisplay">Level: 1</span></div>
     </div>
 
-    <!-- Story log -->
     <div id="storyWindow"></div>
 
-    <!-- Command input -->
     <div id="controls">
       <p><strong>Mobile:</strong> Tap/hold + swipe to move<br>
          <strong>Desktop:</strong> Use W A S D keys</p>
@@ -458,12 +427,10 @@ Client Code
       </form>
     </div>
 
-    <!-- Scene visuals: Phaser container for map engine -->
     <div id="sceneVisuals">
       <div id="phaser-container" style="width: 600px; height: 400px;"></div>
     </div>
 
-    <!-- Sprite Preview Panel (for development) -->
     <div id="spritePreview" style="margin-top: 1rem;">
       <h3>Sprite Preview</h3>
       <div style="display: flex; gap: 1rem;">
@@ -489,10 +456,7 @@ Client Code
 </body>
 </html>
 
----
-
 14. client/style.css
-
 body {
   font-family: Arial, sans-serif;
   margin: 2rem;
@@ -538,10 +502,7 @@ body {
   border: 1px solid #ccc;
 }
 
----
-
 15. client/script.js
-
 let gameId = null;
 
 document.getElementById('create-game').addEventListener('submit', async (e) => {
@@ -602,11 +563,8 @@ function updateSpritePreview(sprites) {
   }
 }
 
----
-
 16. client/mapEngine.js
-
-This file uses Phaser 3 to load a Tiled JSON map. Adjust the asset paths and key names to match your exported Tiled map.
+// This file uses Phaser 3 to load a Tiled JSON map. Adjust the asset paths and key names to match your exported Tiled map.
 
 window.addEventListener('load', () => {
   const config = {
@@ -643,30 +601,22 @@ window.addEventListener('load', () => {
   }
 });
 
----
-
 17. client/effectLayer.js
-
-This file is a stub for adding visual effects (such as spell animations, combat flashes, or particle effects).
+// This file is a stub for adding visual effects (such as spell animations, combat flashes, or particle effects).
 
 // Stub: Implement visual effects (spell animations, combat flashes, particles) here.
 console.log("effectLayer loaded. Implement visual effects as needed.");
 
----
-
 Final Steps
-
-1. Place Your Assets:• Add your sprite images in `client/assets/sprites/` so that they match the paths defined in `server/spriteMap.json`.
-• Place your Tiled map JSON files in `client/assets/maps/` (or in the separate `maps/` folder as desired).
-
-2. Install Dependencies & Run:In your project root, run:npm install
+ * Place Your Assets:
+   * Add your sprite images in client/assets/sprites/ so that they match the paths defined in server/spriteMap.json.
+   * Place your Tiled map JSON files in client/assets/maps/ (or in the separate maps/ folder as desired).
+ * Install Dependencies & Run:
+   In your project root, run:
+   npm install
 npm start
-3. Open Your Game:• Navigate to http://localhost:3000 in your browser to test your RealmWeaver adventure
 
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
-
-## License
+ * Open Your Game:
+   * Navigate to http://localhost:3000 in your browser to test your RealmWeaver adventure!
 
 This project is licensed under the MIT License.
