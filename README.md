@@ -1,363 +1,699 @@
 # D&D Web Adventure Application
 
 This repository contains a D&D web adventure application that integrates AI storytelling. Follow the steps below to set up and run the application on your local machine.
+Folder Structure
 
-## Table of Contents
-
-- [Prerequisites](#prerequisites)
-- [Project Structure](#project-structure)
-- [Setup Instructions](#setup-instructions)
-  - [Step 1: Clone the Repository](#step-1-clone-the-repository)
-  - [Step 2: Install Dependencies](#step-2-install-dependencies)
-  - [Step 3: Set Up the Project](#step-3-set-up-the-project)
-  - [Step 4: Run the Application](#step-4-run-the-application)
-- [Project Structure](#project-structure-1)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
-
-## Prerequisites
-
-- Node.js (v14 or later)
-- npm (v6 or later)
-
-## Project Structure
-
-```
-dnd-web-adventure/
+realmweaver/
+├── client/
+│   ├── index.html                // Main HTML page with game UI, Phaser canvas, and sprite preview panel
+│   ├── style.css                 // Styling for HUD, story log, sprites, etc.
+│   ├── script.js                 // Frontend logic: communicating with server, updating UI
+│   ├── mapEngine.js              // Phaser-based map loader (loads Tiled JSON maps)
+│   ├── effectLayer.js            // (Stub) For visual effects (spell animations, combat flashes)
+│   └── assets/
+│       ├── sprites/              // Your sprite images (tiles, enemies, items, etc.)
+│       └── maps/                 // Exported Tiled map files (JSON format)
 │
-├─ server/
-│  ├─ index.js
+├── server/
+│   ├── index.js                  // Express server and API routes
+│   ├── aiEngine.js               // AI integration (calls Hugging Face and returns narrative with tags)
+│   ├── gameManager.js            // Session management, command processing, logging, quest integration
+│   ├── fileStorage.js            // Saves game logs to disk
+│   ├── questGenerator.js         // Simple quest generator (inspired by Storyteller)
+│   ├── spriteMap.json            // Maps AI tags (like "forest", "goblin") to sprite file paths
+│   └── modules/                  
+│       ├── battleLogic.js        // (Stub) Battle outcome calculations, XP/loot logic
+│       ├── tileTriggers.js       // (Stub) Map event triggers (like traps)
+│       └── npcDialogue.js        // (Stub) NPC dialogue generator
 │
-├─ client/
-│  ├─ index.html
-│  ├─ script.js
-│  ├─ style.css
+├── maps/                         // (Optional) External Tiled map files if you want to keep them separate
 │
-├─ package.json
-├─ package-lock.json
-```
+├── logs/                         // Game session logs will be saved here
+│
+├── .env                          // Environment variables (include your HF API token here)
+├── package.json                  // NPM dependencies and start script
+└── README.md                     // Project overview and instructions
+
+---
+
+File Contents
+
+Below you’ll find the complete code for each file.
+
+---
+
+1. .env
+
+(Place this file in the project root.)
+
+HF_API_TOKEN=your_huggingface_api_token_here
+
+Replace the value with your actual Hugging Face API token.
+
+---
+
+2. package.json
+
+{
+  "name": "realmweaver",
+  "version": "1.0.0",
+  "description": "A modular, AI-driven fantasy adventure game built with open source components.",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "node-fetch": "^2.6.7"
+  }
+}
+
+---
+
+3. README.md
+
+# RealmWeaver – Modular AI-Driven Fantasy Adventure
+
+RealmWeaver is an experimental game engine that combines:
+- **AI Narration:** Uses Hugging Face models (Mistral/Zephyr) for dynamic storytelling.
+- **Quest Generation:** A simple, randomized quest generator inspired by open-source Storyteller ideas.
+- **Sprite-Based Visuals:** Maps narrative tags to your sprite assets via `spriteMap.json`.
+- **Map Rendering:** A Phaser‑powered map engine that loads Tiled JSON maps.
+- **Modular Components:** Stub modules for battle logic, tile triggers, and NPC dialogue.
 
 ## Setup Instructions
 
-### Step 1: Clone the Repository
+1. **Clone or copy the repository.**
 
-Clone this repository to your local machine:
+2. **Install Dependencies:**
+   ```bash
+   npm install
 
-```sh
-git clone https://github.com/yourusername/dnd-web-adventure.git
-cd dnd-web-adventure
-```
+1. Create a `.env` File:• Place your Hugging Face API token in the `.env` file as shown above.
 
-### Step 2: Install Dependencies
+2. Add Your Assets:• Place sprite images in `client/assets/sprites/` (ensure paths match those in `server/spriteMap.json`).
+• Place your Tiled maps (exported as JSON) in `client/assets/maps/` (or in the `maps/` folder).
 
-Install the necessary npm dependencies:
+3. Run the Server:npm start
+4. Open the Game:• Navigate to http://localhost:3000 in your browser.
 
-```sh
-npm install
-```
 
-### Step 3: Set Up the Project
 
-Create the necessary directories and files as outlined in the project structure above. Add the following code to the respective files:
+Expand or swap out modules as needed to fit your creative vision!
 
-#### `server/index.js`
+Happy adventuring!
 
-```javascript
+---
+
+## Server Code
+
+### 4. **server/index.js**
+
+```js
+require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
 const path = require('path');
-const axios = require('axios');
+const { createGame, handleCommand } = require('./gameManager');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const gameStates = {};
-
-// Middleware
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, '../client')));
 
-// Basic route
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/index.html'));
 });
 
-// API routes
 app.post('/api/createGame', async (req, res) => {
   const { worldDescription, playerClass } = req.body;
-  const gameId = generateUniqueId();
   try {
-    const aiResponse = await axios.post('https://api.bolt.new/generateStory', {
-      worldDescription,
-      playerClass
-    });
-    gameStates[gameId] = { worldDescription, playerClass, story: aiResponse.data.story };
-    res.json({ gameId, story: aiResponse.data.story });
+    const data = await createGame(worldDescription, playerClass);
+    res.json(data);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to generate story' });
+    console.error(error);
+    res.status(500).json({ error: 'Failed to create game' });
   }
 });
 
 app.post('/api/sendCommand', async (req, res) => {
   const { gameId, command } = req.body;
-  if (gameStates[gameId]) {
-    try {
-      const aiResponse = await axios.post('https://api.bolt.new/generateUpdate', {
-        command,
-        context: gameStates[gameId].story
-      });
-      gameStates[gameId].story += `\n${aiResponse.data.update}`;
-      res.json({ update: aiResponse.data.update });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to generate update' });
-    }
-  } else {
-    res.status(404).json({ error: 'Game session not found' });
+  try {
+    const data = await handleCommand(gameId, command);
+    res.json(data);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Command failed' });
   }
 });
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
+
+---
+
+5. server/aiEngine.js
+
+require('dotenv').config();
+const fetch = require('node-fetch');
+const fs = require('fs');
+const path = require('path');
+
+const MISTRAL_URL = 'https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.1';
+const ZEPHYR_URL = 'https://api-inference.huggingface.co/models/HuggingFaceH4/zephyr-7b-beta';
+const HF_API_TOKEN = process.env.HF_API_TOKEN;
+
+// Load the sprite map from file
+const spriteMapPath = path.join(__dirname, 'spriteMap.json');
+const spriteMap = JSON.parse(fs.readFileSync(spriteMapPath, 'utf8'));
+
+async function queryHuggingFace(modelUrl, prompt) {
+  const response = await fetch(modelUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${HF_API_TOKEN}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      inputs: prompt,
+      parameters: {
+        max_new_tokens: 300,
+        temperature: 0.9,
+        return_full_text: false
+      }
+    })
+  });
+  const data = await response.json();
+  const rawOutput = data?.[0]?.generated_text || '';
+  try {
+    return JSON.parse(rawOutput.trim());
+  } catch (err) {
+    const fallback = rawOutput.match(/\{[\s\S]+?\}/);
+    if (fallback) {
+      try {
+        return JSON.parse(fallback[0]);
+      } catch (e) {
+        return { scene: rawOutput.trim() };
+      }
+    }
+    return { scene: rawOutput.trim() };
+  }
+}
+
+async function queryAI(prompt) {
+  try {
+    return await queryHuggingFace(MISTRAL_URL, prompt);
+  } catch (e) {
+    console.error('Mistral failed, trying Zephyr.', e);
+    return await queryHuggingFace(ZEPHYR_URL, prompt);
+  }
+}
+
+function matchSprites(tags) {
+  const fallback = {
+    background: "assets/sprites/tiles/unknown.png",
+    enemy: "assets/sprites/enemies/unknown_enemy.png",
+    loot: "assets/sprites/items/unknown_item.png"
+  };
+  
+  return {
+    background: spriteMap[tags.biome] || fallback.background,
+    enemy: spriteMap[tags.enemy] || fallback.enemy,
+    loot: spriteMap[tags.loot] || fallback.loot
+  };
+}
+
+async function generateIntro(world, playerClass) {
+  const introText = `You, a brave ${playerClass}, awaken in ${world}. Darkness looms and adventure calls.`;
+  return {
+    scene: introText,
+    biome: 'unknown',
+    enemy: 'none',
+    loot: 'none'
+  };
+}
+
+async function continueStory(session, playerCommand) {
+  const prompt = `
+You are an AI Dungeon Master.
+Player Command: ${playerCommand}
+Player Level: ${session.playerStats.level}
+Player Class: ${session.playerClass}
+World Description: ${session.worldDescription}
+Inventory: ${session.playerStats.inventory.join(', ') || 'None'}
+Quest Log: ${session.questLog.join('; ') || 'None'}
+
+Return a JSON with the next scene narrative and structured tags as follows:
+{
+  "scene": "Narrative description of the scene...",
+  "biome": "<biome tag>",
+  "enemy": "<enemy tag>",
+  "loot": "<loot tag>"
+}
+`;
+  const result = await queryAI(prompt);
+  const sceneText = result.scene || "The adventure continues...";
+  const tags = {
+    biome: result.biome || '',
+    enemy: result.enemy || '',
+    loot: result.loot || ''
+  };
+  const spriteTags = matchSprites(tags);
+  
+  return { text: sceneText, spriteTags };
+}
+
+module.exports = { generateIntro, continueStory };
+
+---
+
+6. server/gameManager.js
+
+const path = require('path');
+const { generateIntro, continueStory } = require('./aiEngine');
+const { saveLog, updateLog } = require('./fileStorage');
+const { generateQuest } = require('./questGenerator');
+
+const sessions = {};
 
 function generateUniqueId() {
   return '_' + Math.random().toString(36).substr(2, 9);
 }
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
-```
+async function createGame(worldDescription, playerClass) {
+  const gameId = generateUniqueId();
+  const intro = await generateIntro(worldDescription, playerClass);
+  
+  // Optionally, generate an opening quest using the quest generator
+  const initialQuest = generateQuest();
+  
+  sessions[gameId] = {
+    worldDescription,
+    playerClass,
+    story: intro.scene + "\nQuest: " + initialQuest,
+    playerStats: { level: 1, xp: 0, health: 100, inventory: [] },
+    questLog: [initialQuest],
+    logFile: path.join(__dirname, '../logs', `${gameId}.json`)
+  };
+  
+  saveLog(sessions[gameId].logFile, sessions[gameId].story);
+  return {
+    gameId,
+    story: sessions[gameId].story,
+    playerStats: sessions[gameId].playerStats,
+    questLog: sessions[gameId].questLog,
+    sceneSprites: { 
+      background: "assets/sprites/tiles/unknown.png",
+      enemy: "assets/sprites/enemies/unknown_enemy.png",
+      loot: "assets/sprites/items/unknown_item.png" 
+    }
+  };
+}
 
-#### `client/index.html`
+async function handleCommand(gameId, command) {
+  const session = sessions[gameId];
+  if (!session) throw new Error('Game session not found');
 
-```html
+  const updateData = await continueStory(session, command);
+  session.story += "\n" + updateData.text;
+  updateLog(session.logFile, updateData.text);
+  
+  // Optionally, add logic around updating quests or generating new quest events here.
+  
+  return {
+    update: updateData.text,
+    playerStats: session.playerStats,
+    questLog: session.questLog,
+    sceneSprites: updateData.spriteTags
+  };
+}
+
+module.exports = { createGame, handleCommand };
+
+---
+
+7. server/fileStorage.js
+
+const fs = require('fs');
+const path = require('path');
+
+function saveLog(filePath, initialLog) {
+  const logData = { entries: [initialLog] };
+  const dir = path.dirname(filePath);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  fs.writeFileSync(filePath, JSON.stringify(logData, null, 2));
+}
+
+function updateLog(filePath, newEntry) {
+  let logData = { entries: [] };
+  if (fs.existsSync(filePath)) {
+    const rawData = fs.readFileSync(filePath);
+    logData = JSON.parse(rawData);
+  }
+  logData.entries.push(newEntry);
+  fs.writeFileSync(filePath, JSON.stringify(logData, null, 2));
+}
+
+module.exports = { saveLog, updateLog };
+
+---
+
+8. server/questGenerator.js
+
+function generateQuest() {
+  const quests = [
+    "Retrieve the ancient sword from the dungeon depths.",
+    "Rescue the captured villager from the bandit camp.",
+    "Collect 5 healing herbs from the eerie swamp.",
+    "Defeat the goblin chief terrorizing the forest."
+  ];
+  return quests[Math.floor(Math.random() * quests.length)];
+}
+
+module.exports = { generateQuest };
+
+---
+
+9. server/spriteMap.json
+
+{
+  "forest": "assets/sprites/tiles/forest.png",
+  "swamp": "assets/sprites/tiles/swamp.png",
+  "dungeon": "assets/sprites/tiles/dungeon.png",
+  "goblin": "assets/sprites/enemies/goblin.png",
+  "skeleton": "assets/sprites/enemies/skeleton.png",
+  "ogre": "assets/sprites/enemies/ogre.png",
+  "wyrm": "assets/sprites/enemies/wyrm.png",
+  "shadow_wolf": "assets/sprites/enemies/shadow_wolf.png",
+  "healing_potion": "assets/sprites/items/potion.png",
+  "scroll_of_light": "assets/sprites/items/scroll.png",
+  "gold_coin": "assets/sprites/items/gold.png",
+  "mystic_relic": "assets/sprites/items/relic.png"
+}
+
+---
+
+10. server/modules/battleLogic.js
+
+function calculateBattleOutcome(player, enemy) {
+  // Simple logic: if the player's level is equal to or higher than the enemy's, the player wins.
+  if (player.level >= enemy.level) {
+    return { victory: true, xpGained: enemy.level * 10 };
+  }
+  return { victory: false, damage: enemy.level * 5 };
+}
+
+module.exports = { calculateBattleOutcome };
+
+---
+
+11. server/modules/tileTriggers.js
+
+function checkTileEvent(tileType) {
+  if (tileType === 'trap') {
+    return "You've stepped on a trap! Lose 10 HP.";
+  }
+  return null;
+}
+
+module.exports = { checkTileEvent };
+
+---
+
+12. server/modules/npcDialogue.js
+
+function getNPCDialogue(npcName) {
+  const dialogues = {
+    "old_wise": "The forest holds many secrets. Tread carefully.",
+    "merchant": "I trade rare items for brave adventurers.",
+    "guard": "Halt! What brings you to these parts?"
+  };
+  return dialogues[npcName] || "Hello there.";
+}
+
+module.exports = { getNPCDialogue };
+
+---
+
+Client Code
+
+13. client/index.html
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>D&D Web Adventure</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RealmWeaver Adventure</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Load Phaser from CDN for map rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
 </head>
 <body>
+  <!-- Lobby where player creates a game -->
   <div id="lobby">
-    <h1>Welcome to the D&D Web Adventure</h1>
-    <form id="gameForm">
-      <label for="worldInput">Describe Your World:</label>
-      <textarea id="worldInput" placeholder="E.g., a dark fantasy realm or a steampunk city"></textarea>
-
-      <label for="classSelect">Choose Your Class:</label>
-      <select id="classSelect">
-        <option value="fighter">Fighter</option>
-        <option value="wizard">Wizard</option>
-        <option value="rogue">Rogue</option>
-        <option value="cleric">Cleric</option>
-      </select>
-
+    <h1>RealmWeaver Lobby</h1>
+    <form id="create-game">
+      <input type="text" id="worldDescription" placeholder="Describe your world" required />
+      <input type="text" id="playerClass" placeholder="Your class" required />
       <button type="submit">Start Game</button>
     </form>
   </div>
 
-  <div id="gameScreen" style="display:none;">
-    <h2>Your Adventure Awaits!</h2>
-    <input type="hidden" id="gameId">
-    <div id="storyBoard"></div>
-    <input type="text" id="playerCommand" placeholder="Enter your action...">
-    <button id="sendCommand">Send</button>
+  <!-- Main game interface -->
+  <div id="game" style="display: none;">
+    <h2>RealmWeaver Adventure</h2>
+    
+    <!-- HUD -->
+    <div id="hud">
+      <div class="stat"><span class="icon">❤️</span><span id="hpDisplay">HP: 100</span></div>
+      <div class="stat"><span class="icon">⭐</span><span id="xpDisplay">XP: 0 / 50</span></div>
+      <div class="stat"><span class="icon">⬆️</span><span id="lvlDisplay">Level: 1</span></div>
+    </div>
+
+    <!-- Story log -->
+    <div id="storyWindow"></div>
+
+    <!-- Command input -->
+    <div id="controls">
+      <p><strong>Mobile:</strong> Tap/hold + swipe to move<br>
+         <strong>Desktop:</strong> Use W A S D keys</p>
+      <form id="command-form">
+        <input type="text" id="userCommand" placeholder="Enter command" required />
+        <button type="submit">Send Command</button>
+      </form>
+    </div>
+
+    <!-- Scene visuals: Phaser container for map engine -->
+    <div id="sceneVisuals">
+      <div id="phaser-container" style="width: 600px; height: 400px;"></div>
+    </div>
+
+    <!-- Sprite Preview Panel (for development) -->
+    <div id="spritePreview" style="margin-top: 1rem;">
+      <h3>Sprite Preview</h3>
+      <div style="display: flex; gap: 1rem;">
+        <div>
+          <strong>Background:</strong><br />
+          <img id="bgSprite" width="96" height="96" />
+        </div>
+        <div>
+          <strong>Enemy:</strong><br />
+          <img id="enemyPreview" width="96" height="96" />
+        </div>
+        <div>
+          <strong>Loot:</strong><br />
+          <img id="lootSprite" width="96" height="96" />
+        </div>
+      </div>
+    </div>
   </div>
 
   <script src="script.js"></script>
+  <script src="mapEngine.js"></script>
+  <script src="effectLayer.js"></script>
 </body>
 </html>
-```
 
-#### `client/script.js`
+---
 
-```javascript
-document.getElementById('gameForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
+14. client/style.css
 
-  const worldDescription = document.getElementById('worldInput').value;
-  const playerClass = document.getElementById('classSelect').value;
-
-  try {
-    const response = await fetch('/api/createGame', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ worldDescription, playerClass })
-    });
-
-    const data = await response.json();
-    document.getElementById('lobby').style.display = 'none';
-    document.getElementById('gameScreen').style.display = 'block';
-    document.getElementById('storyBoard').innerText = data.story;
-    document.getElementById('gameId').value = data.gameId; // Store gameId for future commands
-  } catch (error) {
-    console.error('Error starting game:', error);
-    alert('Failed to start game. Please try again.');
-  }
-});
-
-// Handling player commands
-document.getElementById('sendCommand').addEventListener('click', async () => {
-  const command = document.getElementById('playerCommand').value;
-  const gameId = document.getElementById('gameId').value;
-
-  if (!command.trim()) return;
-
-  try {
-    const response = await fetch('/api/sendCommand', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ gameId, command })
-    });
-
-    const data = await response.json();
-    const storyBoard = document.getElementById('storyBoard');
-    storyBoard.innerText += '\n\n' + data.update;
-    document.getElementById('playerCommand').value = '';
-  } catch (error) {
-    console.error('Error sending command:', error);
-    alert('Failed to send command. Please try again.');
-  }
-});
-
-// Allow Enter key to send commands
-document.getElementById('playerCommand').addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    document.getElementById('sendCommand').click();
-  }
-});
-```
-
-#### `client/style.css`
-
-```css
 body {
   font-family: Arial, sans-serif;
+  margin: 2rem;
+  background-color: #f9f9f9;
+}
+
+#lobby, #game {
   max-width: 800px;
-  margin: 0 auto;
-  padding: 20px;
-  background-color: #f5f5f5;
-  background-image: url('path/to/background-image.jpg');
-  background-size: cover;
-  background-position: center;
+  margin: auto;
 }
 
-#lobby {
-  background: white;
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-}
-
-h1 {
-  color: #333;
-  text-align: center;
-  margin-bottom: 30px;
-}
-
-form {
+#hud {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
 }
 
-label {
-  font-weight: bold;
-  color: #555;
+.stat .icon {
+  font-size: 1.4rem;
+  margin-right: 0.3rem;
 }
 
-textarea, select, input {
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  font-size: 16px;
+#storyWindow {
+  border: 1px solid #ccc;
+  padding: 1rem;
+  height: 300px;
+  overflow-y: auto;
+  background: #fff;
+  margin-bottom: 1rem;
 }
 
-textarea {
-  min-height: 100px;
-  resize: vertical;
+#controls {
+  margin-top: 1rem;
 }
 
-button {
-  background-color: #007bff;
-  color: white;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s;
+#sceneVisuals {
+  margin-top: 1rem;
 }
 
-button:hover {
-  background-color: #0056b3;
+#sceneVisuals img {
+  margin: 0.5rem;
+  border: 1px solid #ccc;
 }
 
-#gameScreen {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 30px;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  border: 2px solid #007bff;
+---
+
+15. client/script.js
+
+let gameId = null;
+
+document.getElementById('create-game').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const worldDescription = document.getElementById('worldDescription').value;
+  const playerClass = document.getElementById('playerClass').value;
+  
+  const res = await fetch('/api/createGame', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ worldDescription, playerClass })
+  });
+  const data = await res.json();
+  gameId = data.gameId;
+  document.getElementById('lobby').style.display = 'none';
+  document.getElementById('game').style.display = 'block';
+  updateStory(data.story, data.playerStats, data.questLog);
+  updateSpritePreview({
+    background: data.sceneSprites ? data.sceneSprites.background : "assets/sprites/tiles/unknown.png",
+    enemy: data.sceneSprites ? data.sceneSprites.enemy : "assets/sprites/enemies/unknown_enemy.png",
+    loot: data.sceneSprites ? data.sceneSprites.loot : "assets/sprites/items/unknown_item.png"
+  });
+});
+
+document.getElementById('command-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const command = document.getElementById('userCommand').value;
+  const res = await fetch('/api/sendCommand', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ gameId, command })
+  });
+  const data = await res.json();
+  updateStory(data.update, data.playerStats, data.questLog);
+  updateSpritePreview(data.sceneSprites);
+});
+
+function updateStory(text, stats, questLog) {
+  const windowDiv = document.getElementById('storyWindow');
+  windowDiv.innerHTML += `<p>${text}</p>`;
+  windowDiv.scrollTop = windowDiv.scrollHeight;
+  
+  // Update HUD
+  document.getElementById('hpDisplay').textContent = `HP: ${stats.health}`;
+  document.getElementById('xpDisplay').textContent = `XP: ${stats.xp} / ${stats.level * 50}`;
+  document.getElementById('lvlDisplay').textContent = `Level: ${stats.level}`;
 }
 
-#storyBoard {
-  background-color: #f8f9fa;
-  padding: 20px;
-  border-radius: 5px;
-  margin: 20px 0;
-  min-height: 200px;
-  border-left: 6px solid #007bff;
-  white-space: pre-wrap;
+function updateSpritePreview(sprites) {
+  if (sprites.background) {
+    document.getElementById('bgSprite').src = sprites.background;
+  }
+  if (sprites.enemy) {
+    document.getElementById('enemyPreview').src = sprites.enemy;
+  }
+  if (sprites.loot) {
+    document.getElementById('lootSprite').src = sprites.loot;
+  }
 }
 
-#playerCommand {
-  width: calc(100% - 100px);
-  display: inline-block;
-  margin-right: 10px;
-}
+---
 
-#sendCommand {
-  width: 80px;
-  display: inline-block;
-}
-```
+16. client/mapEngine.js
 
-### Step 4: Run the Application
+This file uses Phaser 3 to load a Tiled JSON map. Adjust the asset paths and key names to match your exported Tiled map.
 
-Start the server by running:
+window.addEventListener('load', () => {
+  const config = {
+    type: Phaser.AUTO,
+    width: 600,
+    height: 400,
+    parent: 'phaser-container',
+    scene: {
+      preload: preload,
+      create: create,
+      update: update
+    }
+  };
 
-```sh
-node server/index.js
-```
+  const game = new Phaser.Game(config);
+  let map, tileset, layer;
 
-Open your browser and navigate to `http://localhost:3000`. You should see the D&D web adventure application interface. You can describe your world, choose your class, and start your adventure. The application will generate a story based on your inputs and allow you to send commands to progress the narrative.
+  function preload() {
+    // Load the Tiled JSON map. Place the JSON file in client/assets/maps/
+    this.load.tilemapTiledJSON('map', 'assets/maps/forest_start.json');
+    // Load the tileset image. Adjust the key and path according to your asset.
+    this.load.image('tiles', 'assets/sprites/tiles/forest.png');
+  }
 
-## Project Structure
+  function create() {
+    map = this.make.tilemap({ key: 'map' });
+    // Replace 'YourTilesetName' with the name used in Tiled
+    tileset = map.addTilesetImage('YourTilesetName', 'tiles');
+    layer = map.createLayer('Tile Layer 1', tileset, 0, 0);
+  }
 
-```
-dnd-web-adventure/
-│
-├─ server/
-│  ├─ index.js
-│
-├─ client/
-│  ├─ index.html
-│  ├─ script.js
-│  ├─ style.css
-│
-├─ package.json
-├─ package-lock.json
-```
+  function update() {
+    // Optional: Add logic for player movement, collisions, etc.
+  }
+});
 
-## Usage
+---
 
-1. **Start the Server**: Run `node server/index.js` to start the Express server.
-2. **Open the Application**: Navigate to `http://localhost:3000` in your web browser.
-3. **Describe Your World**: Enter a description of the world you want to adventure in.
-4. **Choose Your Class**: Select your character class from the dropdown menu.
-5. **Start the Game**: Click the "Start Game" button to begin your adventure.
-6. **Send Commands**: Enter commands in the input field and click "Send" or press Enter to progress the story.
+17. client/effectLayer.js
+
+This file is a stub for adding visual effects (such as spell animations, combat flashes, or particle effects).
+
+// Stub: Implement visual effects (spell animations, combat flashes, particles) here.
+console.log("effectLayer loaded. Implement visual effects as needed.");
+
+---
+
+Final Steps
+
+1. Place Your Assets:• Add your sprite images in `client/assets/sprites/` so that they match the paths defined in `server/spriteMap.json`.
+• Place your Tiled map JSON files in `client/assets/maps/` (or in the separate `maps/` folder as desired).
+
+2. Install Dependencies & Run:In your project root, run:npm install
+npm start
+3. Open Your Game:• Navigate to http://localhost:3000 in your browser to test your RealmWeaver adventure
 
 ## Contributing
 
