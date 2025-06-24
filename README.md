@@ -33,4 +33,22 @@ Expanding RealmWeaver
 RealmWeaver is designed to be modular. Feel free to dive into the server/modules/ directory to expand on the battle logic, tile triggers, or NPC dialogue. Whether you want to add complex combat systems, intricate environmental puzzles, or branching dialogue trees, the framework is ready for your enhancements.
 Happy adventuring!
 
+
+To get RealmWeaver up and running, you'll need the following prerequisites and dependencies:
+Prerequisites
+These are the foundational tools you'll need installed on your system before you start:
+ * Node.js: RealmWeaver's server-side logic and build processes rely on Node.js. It comes bundled with npm (Node Package Manager).
+   * How to check: Open your terminal or command prompt and type node -v and npm -v. If you see version numbers, you're good.
+   * How to install: Download the recommended version from the official Node.js website.
+ * A Hugging Face API Token: This is essential for the AI narration feature to work. You'll use this token in your .env file.
+   * How to get one: Sign up on the Hugging Face website and then generate an API token from your profile settings.
+Dependencies
+These are the software libraries and packages that RealmWeaver uses. They are automatically installed via npm once you have Node.js set up.
+ * express: A fast, unopinionated, minimalist web framework for Node.js, used to build the server and API routes.
+ * body-parser: A Node.js middleware for handling JSON, raw, text, and URL-encoded form data. It's used here to parse incoming request bodies.
+ * dotenv: A zero-dependency module that loads environment variables from a .env file into process.env. This is how your Hugging Face API token is securely loaded.
+ * node-fetch: A light-weight module that brings the window.fetch API to Node.js, used for making HTTP requests to the Hugging Face API.
+ * Phaser: A fast, free, and fun open-source HTML5 game framework. It's loaded via CDN in client/index.html and used by client/mapEngine.js for map rendering.
+Once you have Node.js installed, you can automatically handle the dependencies by running npm install in your project's root directory. After that, make sure your .env file has your Hugging Face API token, and you'll be ready to launch the game!
+
     
