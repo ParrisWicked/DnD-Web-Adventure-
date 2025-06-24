@@ -1,0 +1,28 @@
+
+realmweaver/
+├── client/
+│   ├── index.html
+│   ├── style.css
+│   ├── script.js
+│   ├── mapEngine.js
+│   ├── effectLayer.js
+│   └── assets/
+│       ├── sprites/
+│       └── maps/
+├── server/
+│   ├── index.js
+│   ├── aiEngine.js
+│   ├── gameManager.js
+│   ├── fileStorage.js
+│   ├── questGenerator.js
+│   ├── spriteMap.json
+│   └── modules/
+│       ├── battleLogic.js
+│       ├── tileTriggers.js
+│       └── npcDialogue.js
+├── maps/
+├── logs/
+├── .env
+├── package.json
+└── README.md
+
