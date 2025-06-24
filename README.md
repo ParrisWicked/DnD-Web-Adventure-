@@ -3,44 +3,12 @@
 This repository contains a D&D web adventure application that integrates AI storytelling. Follow the steps below to set up and run the application on your local machine.
 Folder Structure
 
-realmweaver/
-├── client/
-│   ├── index.html                // Main HTML page with game UI, Phaser canvas, and sprite preview panel
-│   ├── style.css                 // Styling for HUD, story log, sprites, etc.
-│   ├── script.js                 // Frontend logic: communicating with server, updating UI
-│   ├── mapEngine.js              // Phaser-based map loader (loads Tiled JSON maps)
-│   ├── effectLayer.js            // (Stub) For visual effects (spell animations, combat flashes)
-│   └── assets/
-│       ├── sprites/              // Your sprite images (tiles, enemies, items, etc.)
-│       └── maps/                 // Exported Tiled map files (JSON format)
-│
-├── server/
-│   ├── index.js                  // Express server and API routes
-│   ├── aiEngine.js               // AI integration (calls Hugging Face and returns narrative with tags)
-│   ├── gameManager.js            // Session management, command processing, logging, quest integration
-│   ├── fileStorage.js            // Saves game logs to disk
-│   ├── questGenerator.js         // Simple quest generator (inspired by Storyteller)
-│   ├── spriteMap.json            // Maps AI tags (like "forest", "goblin") to sprite file paths
-│   └── modules/                  
-│       ├── battleLogic.js        // (Stub) Battle outcome calculations, XP/loot logic
-│       ├── tileTriggers.js       // (Stub) Map event triggers (like traps)
-│       └── npcDialogue.js        // (Stub) NPC dialogue generator
-│
-├── maps/                         // (Optional) External Tiled map files if you want to keep them separate
-│
-├── logs/                         // Game session logs will be saved here
-│
-├── .env                          // Environment variables (include your HF API token here)
-├── package.json                  // NPM dependencies and start script
-└── README.md                     // Project overview and instructions
 
----
 
 File Contents
 
 Below you’ll find the complete code for each file.
 
----
 
 1. .env
 
