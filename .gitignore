@@ -1,0 +1,33 @@
+.gitignore
+This file tells Git which files and directories to ignore and not commit to your repository. It's crucial for keeping your project clean and secure by preventing unnecessary or sensitive files from being tracked.
+Create a file named .gitignore in the root directory of your realmweaver project and paste the following content into it:
+# Node modules
+node_modules/
+
+# Environment variables
+.env
+
+# Game logs
+logs/
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Editor-specific files (e.g., VS Code)
+.vscode/
+
+# Build artifacts (if any are generated in the future outside of node_modules)
+dist/
+build/
+
+# npm debug logs
+npm-debug.log*
+.npm/
+.yarn-integrity
+
+# macOS specific
+.Spotlight-V100
+.Trashes
+Icon?
+
